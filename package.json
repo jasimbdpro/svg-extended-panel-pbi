@@ -1,0 +1,38 @@
+{
+  "name": "svg-panel",
+  "description": "Modernized Power BI custom visual for mapping data onto SVG diagrams",
+  "version": "1.5.5.0",
+  "packageManager": "pnpm@11.21.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TKlerx/svg-panel"
+  },
+  "license": "MIT",
+  "scripts": {
+    "pbiviz": "pbiviz",
+    "start": "pbiviz start",
+    "package": "pbiviz package",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "complexity": "eslint . --rule complexity:[2,31]",
+    "duplication": "jscpd src --threshold 5 --gitignore",
+    "validate": "pwsh -NoProfile -File ./validate.ps1 all"
+  },
+  "dependencies": {
+    "powerbi-visuals-api": "~5.11.1",
+    "powerbi-visuals-utils-formattingmodel": "7.1.0"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.67.0",
+    "css-loader": "7.1.4",
+    "eslint": "^10.8.1",
+    "eslint-plugin-powerbi-visuals": "^1.0.0",
+    "jscpd": "^4.0.9",
+    "json-loader": "0.5.7",
+    "less-loader": "12.3.2",
+    "powerbi-visuals-tools": "7.2.1",
+    "ts-loader": "9.5.7",
+    "typescript": "5.5.4",
+    "vitest": "^4.1.10"
+  }
+}
