@@ -15,17 +15,13 @@ import ViewMode = powerbi.ViewMode;
 import VisualConstructorOptions = powerbi.extensibility.visual.VisualConstructorOptions;
 import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
 
-import { createSynopticModel, formatNumber, type SynopticDataPoint, type SynopticMapArea, type SynopticMapDefinition, type SynopticMapScale, type SynopticModel, type SynopticVisualSettings } from "./core/modelParsing";
-import { buildMatchVariants } from "./core/svgMatching";
+import { createSynopticModel, type SynopticDataPoint, type SynopticMapDefinition, type SynopticMapScale, type SynopticModel, type SynopticVisualSettings } from "./core/modelParsing";
+import { getIndexedElements, getMatchingElements, getUnmatchedElements, indexSvg, inferAreas, type SvgMatchMap } from "./core/svgIndex";
 import { DEFAULT_ZOOM, buildTransformStyle, createZeroPan, nextZoom, shouldResetPanForZoom } from "./core/zoomPan";
+import { buildLabelText, buildUnmatchedLabelText, renderLabels, type LabelSpec } from "./core/labels";
+import { applySelectionState } from "./core/selection";
+import { attachTooltipEvents } from "./core/tooltips";
 import { VisualFormattingSettingsModel } from "./settings";
-
-interface LabelSpec {
-    element: SVGElement;
-    text: string;
-}
-
-type SvgMatchMap = Map<string, SVGElement[]>;
 
 export class Visual implements IVisual {
     private readonly target: HTMLElement;
@@ -40,6 +36,7 @@ export class Visual implements IVisual {
     private readonly svgHost: HTMLDivElement;
     private readonly tooltipService: ITooltipService;
     private readonly mapCache: Map<string, string>;
+    private readonly legendColorCache: Map<string, string>;
     private formattingSettings: VisualFormattingSettingsModel;
     private updateNonce: number;
     private currentSvg: SVGSVGElement | null;
@@ -66,6 +63,7 @@ export class Visual implements IVisual {
         this.tooltipService = options.host.tooltipService;
         this.formattingSettingsService = new FormattingSettingsService();
         this.mapCache = new Map<string, string>();
+        this.legendColorCache = new Map<string, string>();
         this.updateNonce = 0;
         this.currentSvg = null;
         this.currentMatchedElements = new Set();
@@ -82,7 +80,7 @@ export class Visual implements IVisual {
         this.selectionManager.registerOnSelectCallback(() => {
             const ids = this.selectionManager.getSelectionIds() as ISelectionId[];
             if (this.currentSvg) {
-                this.applySelectionState(this.currentSvg, this.currentMatchedElements, ids);
+                applySelectionState(this.currentSvg, this.currentMatchedElements, ids);
             }
         });
 
@@ -255,7 +253,7 @@ export class Visual implements IVisual {
 
     private transform(dataView: DataView | undefined, colorPalette: IColorPalette): SynopticModel<ISelectionId> {
         return createSynopticModel(dataView, {
-            getColor: (key) => colorPalette.getColor(key).value,
+            getColor: (key) => this.getLegendColor(key, colorPalette),
             createSelectionId: (categoryColumn, index) => this.host.createSelectionIdBuilder()
                 .withCategory(categoryColumn, index)
                 .createSelectionId()
@@ -284,7 +282,7 @@ export class Visual implements IVisual {
             const storedFill = colorColumn?.objects?.[index]?.["legend"] as { fill?: { solid?: { color?: string } } } | undefined;
             categories.push({
                 name,
-                color: storedFill?.fill?.solid?.color ?? this.host.colorPalette.getColor(name).value,
+                color: storedFill?.fill?.solid?.color ?? this.getLegendColor(name, this.host.colorPalette),
                 selector: this.host.createSelectionIdBuilder()
                     .withCategory(colorColumn!, index)
                     .createSelectionId()
@@ -296,6 +294,17 @@ export class Visual implements IVisual {
             categories,
             "Legend colors"
         );
+    }
+
+    private getLegendColor(key: string, colorPalette: IColorPalette): string {
+        const cachedColor = this.legendColorCache.get(key);
+        if (cachedColor) {
+            return cachedColor;
+        }
+
+        const color = colorPalette.getColor(key).value;
+        this.legendColorCache.set(key, color);
+        return color;
     }
 
     private async render(model: SynopticModel<ISelectionId>, nonce: number): Promise<void> {
@@ -327,8 +336,8 @@ export class Visual implements IVisual {
 
             const areas = model.map.areas && model.map.areas.length > 0
                 ? model.map.areas
-                : this.inferAreas(svgElement);
-            const matchMap = this.indexSvg(svgElement, areas);
+                : inferAreas(svgElement);
+            const matchMap = indexSvg(svgElement, areas);
             const { matchedElements, labels: labelSpecs } = this.applyData(svgElement, matchMap, model);
 
             this.svgHost.appendChild(svgElement);
@@ -339,15 +348,15 @@ export class Visual implements IVisual {
 
             // Render labels after the SVG is in the DOM so getBBox() returns real bounds.
             if (model.settings.dataLabels.show) {
-                this.renderLabels(svgElement, labelSpecs, model.settings);
+                renderLabels(svgElement, labelSpecs, model.settings);
             }
 
             const activeIds = this.selectionManager.getSelectionIds() as ISelectionId[];
             if (activeIds.length > 0) {
-                this.applySelectionState(svgElement, matchedElements, activeIds);
+                applySelectionState(svgElement, matchedElements, activeIds);
             }
 
-            const matchedCount = model.dataPoints.filter((point) => this.getMatchingElements(point.key, matchMap).length > 0).length;
+            const matchedCount = model.dataPoints.filter((point) => getMatchingElements(point.key, matchMap).length > 0).length;
             this.status.textContent = this.buildStatusText(model, areas.length, matchMap.size, matchedCount);
             const highlightedCount = model.dataPoints.filter((point) => point.isHighlighted).length;
             this.writeDiagnostic(model.settings, "render", {
@@ -378,7 +387,7 @@ export class Visual implements IVisual {
         svgElement.setAttribute("data-has-highlights", model.hasHighlights ? "true" : "false");
 
         for (const point of model.dataPoints) {
-            const matches = this.getMatchingElements(point.key, matchMap);
+            const matches = getMatchingElements(point.key, matchMap);
             if (matches.length === 0) {
                 continue;
             }
@@ -399,7 +408,7 @@ export class Visual implements IVisual {
                     element.style.strokeWidth = element.style.strokeWidth || "1";
                 }
 
-                this.attachTooltipEvents(element, point.tooltips, point.selectionId);
+                attachTooltipEvents(element, this.root, this.tooltipService, point.tooltips, point.selectionId);
                 element.addEventListener("click", (event: MouseEvent) => {
                     if (this.isPanDragging) { event.stopPropagation(); return; }
                     event.preventDefault();
@@ -411,12 +420,12 @@ export class Visual implements IVisual {
                             this.status.textContent = `sel:${ids.length} has:${this.selectionManager.hasSelection()} svg:${!!this.currentSvg}`;
                         }
                         if (this.currentSvg) {
-                            this.applySelectionState(this.currentSvg, this.currentMatchedElements, ids);
+                            applySelectionState(this.currentSvg, this.currentMatchedElements, ids);
                         }
                     });
                 });
 
-                const labelText = this.buildLabelText(point, element, model.settings);
+                const labelText = buildLabelText(point, element, model.settings);
                 if (labelText) {
                     labels.push({
                         element,
@@ -436,9 +445,9 @@ export class Visual implements IVisual {
             }
         }
 
-        const indexedElements = this.getIndexedElements(matchMap);
+        const indexedElements = getIndexedElements(matchMap);
 
-        const unmatchedElements = this.getUnmatchedElements(indexedElements, matchedElements);
+        const unmatchedElements = getUnmatchedElements(indexedElements, matchedElements);
 
         for (const element of indexedElements) {
             if (!matchedElements.has(element)) {
@@ -471,7 +480,7 @@ export class Visual implements IVisual {
                     continue;
                 }
 
-                const labelText = this.buildUnmatchedLabelText(element, model.settings);
+                const labelText = buildUnmatchedLabelText(element, model.settings);
                 if (labelText) {
                     labels.push({
                         element,
@@ -485,296 +494,12 @@ export class Visual implements IVisual {
             if (this.isPanDragging) { return; }
             void this.selectionManager.clear().then(() => {
                 if (this.currentSvg) {
-                    this.applySelectionState(this.currentSvg, this.currentMatchedElements, []);
+                    applySelectionState(this.currentSvg, this.currentMatchedElements, []);
                 }
             });
         });
 
         return { matchedElements, labels };
-    }
-
-    private getUnmatchedElements(indexedElements: Set<SVGElement>, matchedElements: Set<SVGElement>): Set<SVGElement> {
-        const unmatchedElements = new Set<SVGElement>();
-
-        for (const element of indexedElements) {
-            if (matchedElements.has(element) || this.hasMatchedDescendant(element, matchedElements)) {
-                continue;
-            }
-
-            unmatchedElements.add(element);
-        }
-
-        return unmatchedElements;
-    }
-
-    private hasMatchedDescendant(element: SVGElement, matchedElements: Set<SVGElement>): boolean {
-        for (const matchedElement of matchedElements) {
-            if (matchedElement !== element && element.contains(matchedElement)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private getIndexedElements(matchMap: SvgMatchMap): Set<SVGElement> {
-        const elements = new Set<SVGElement>();
-        for (const matches of matchMap.values()) {
-            for (const element of matches) {
-                elements.add(element);
-            }
-        }
-        return elements;
-    }
-
-    private renderLabels(svgElement: SVGSVGElement, labels: LabelSpec[], settings: SynopticVisualSettings): void {
-        const labelLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
-        labelLayer.setAttribute("class", "synoptic-label-layer");
-        labelLayer.setAttribute("pointer-events", "none");
-
-        for (const label of labels) {
-            const bbox = this.getElementBounds(label.element);
-            const textNode = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            const x = settings.dataLabels.position === "top" ? bbox.x + 4 : bbox.x + (bbox.width / 2);
-            const y = settings.dataLabels.position === "top" ? bbox.y + 14 : bbox.y + (bbox.height / 2);
-
-            textNode.setAttribute("x", `${x}`);
-            textNode.setAttribute("y", `${y}`);
-            textNode.setAttribute("font-size", `${settings.dataLabels.fontSize}`);
-            textNode.setAttribute("class", "synoptic-label");
-            textNode.textContent = label.text;
-
-            if (settings.dataLabels.position === "top") {
-                textNode.setAttribute("text-anchor", "start");
-            } else {
-                textNode.setAttribute("text-anchor", "middle");
-                textNode.setAttribute("dominant-baseline", "middle");
-            }
-
-            labelLayer.appendChild(textNode);
-        }
-
-        svgElement.appendChild(labelLayer);
-    }
-
-    private buildLabelText(point: SynopticDataPoint<ISelectionId>, element: SVGElement, settings: SynopticVisualSettings): string {
-        const areaName = this.readElementDisplayName(element);
-        switch (settings.dataLabels.labelStyle) {
-            case "area":
-                return areaName ?? point.key;
-            case "value":
-                return point.value == null ? "" : formatNumber(point.value);
-            case "both":
-                return point.value == null ? point.key : `${point.key} ${formatNumber(point.value)}`;
-            case "both2":
-                return point.value == null ? (areaName ?? point.key) : `${areaName ?? point.key} ${formatNumber(point.value)}`;
-            case "category":
-            default:
-                return point.key;
-        }
-    }
-
-    private buildUnmatchedLabelText(element: SVGElement, settings: SynopticVisualSettings): string {
-        if (settings.dataLabels.labelStyle === "value") {
-            return "";
-        }
-
-        const areaName = this.readElementDisplayName(element);
-        return areaName ?? "";
-    }
-
-    private applySelectionState(svgElement: SVGSVGElement, matchedElements: Set<SVGElement>, activeSelections: ISelectionId[]): void {
-        const hasSelection = activeSelections.length > 0;
-        const hasHighlights = svgElement.getAttribute("data-has-highlights") === "true";
-        const activeKeys = new Set(activeSelections.map((s) => s.getKey()));
-
-        if (!hasSelection && !hasHighlights) {
-            svgElement.removeAttribute("data-synoptic-dimmed");
-            for (const element of matchedElements) {
-                element.removeAttribute("data-synoptic-active");
-            }
-            return;
-        }
-
-        svgElement.setAttribute("data-synoptic-dimmed", "true");
-
-        for (const element of matchedElements) {
-            if (hasSelection) {
-                const selKey = element.getAttribute("data-selection-key");
-                const isSelected = selKey != null && activeKeys.has(selKey);
-                if (isSelected) {
-                    element.setAttribute("data-synoptic-active", "true");
-                } else {
-                    element.removeAttribute("data-synoptic-active");
-                }
-            } else {
-                const isHighlighted = element.getAttribute("data-highlighted") === "true";
-                if (isHighlighted) {
-                    element.setAttribute("data-synoptic-active", "true");
-                } else {
-                    element.removeAttribute("data-synoptic-active");
-                }
-            }
-        }
-    }
-
-    private indexSvg(svgElement: SVGSVGElement, areas: SynopticMapArea[]): SvgMatchMap {
-        const matchMap: SvgMatchMap = new Map<string, SVGElement[]>();
-        const areaBySelector = new Map<string, SynopticMapArea>();
-
-        for (const area of areas) {
-            if (area.selector) {
-                areaBySelector.set(area.selector.replace(/^\./, ""), area);
-            }
-        }
-
-        for (const element of this.collectRenderableElements(svgElement)) {
-            const area = this.resolveAreaMetadata(element, areaBySelector);
-            if (area?.unmatchable) {
-                continue;
-            }
-
-            if (area?.displayName) {
-                element.setAttribute("data-synoptic-display-name", area.displayName);
-            }
-
-            const candidateKeys = [
-                area?.displayName,
-                area?.elementId,
-                element.id,
-                element.getAttribute("title"),
-                this.readTitleNode(element),
-                this.readElementDisplayName(element)
-            ];
-
-            for (const candidate of candidateKeys) {
-                for (const variant of buildMatchVariants(candidate)) {
-                    const elements = matchMap.get(variant) ?? [];
-                    if (!elements.includes(element)) {
-                        elements.push(element);
-                    }
-                    matchMap.set(variant, elements);
-                }
-            }
-        }
-
-        return matchMap;
-    }
-
-    private inferAreas(svgElement: SVGSVGElement): SynopticMapArea[] {
-        const areas: SynopticMapArea[] = [];
-
-        for (const element of this.collectRenderableElements(svgElement)) {
-            const elementId = element.id || undefined;
-            const displayName = this.readTitleNode(element)
-                ?? element.getAttribute("title")
-                ?? elementId;
-            const parentMatchableName = this.findMatchableParentName(element);
-            const unmatchable = this.isIgnoredOrExcluded(element) || this.isExcludedParent(element);
-
-            if (!elementId && !displayName && !parentMatchableName) {
-                continue;
-            }
-
-            areas.push({
-                selector: elementId ? `#${this.escapeSelector(elementId)}` : undefined,
-                elementId,
-                displayName: parentMatchableName ?? displayName ?? undefined,
-                unmatchable
-            });
-        }
-
-        return areas;
-    }
-
-    private resolveAreaMetadata(element: SVGElement, areaBySelector: Map<string, SynopticMapArea>): SynopticMapArea | undefined {
-        const classList = Array.from(element.classList);
-        for (const className of classList) {
-            const area = areaBySelector.get(className);
-            if (area) {
-                return area;
-            }
-        }
-
-        return undefined;
-    }
-
-    private collectRenderableElements(svgElement: SVGSVGElement): SVGElement[] {
-        const selector = "g, path, polygon, polyline, rect, circle, ellipse, line, text";
-        return Array.from(svgElement.querySelectorAll<SVGElement>(selector));
-    }
-
-    private getMatchingElements(key: string, matchMap: SvgMatchMap): SVGElement[] {
-        const matches: SVGElement[] = [];
-        const seen = new Set<SVGElement>();
-
-        for (const variant of buildMatchVariants(key)) {
-            for (const element of matchMap.get(variant) ?? []) {
-                if (!seen.has(element)) {
-                    seen.add(element);
-                    matches.push(element);
-                }
-            }
-        }
-
-        return matches;
-    }
-
-    private isIgnoredOrExcluded(element: SVGElement): boolean {
-        return element.matches("#_x5F_ignored, #_ignored, .excluded, #_x5F_excluded, #_excluded");
-    }
-
-    private isExcludedParent(element: SVGElement): boolean {
-        const parent = element.parentElement?.closest("[id], svg");
-        if (!parent || parent.tagName.toLowerCase() === "svg") {
-            return false;
-        }
-
-        return parent.matches(".excluded, #_x5F_excluded, #_excluded");
-    }
-
-    private findMatchableParentName(element: SVGElement): string | null {
-        const parent = element.parentElement?.closest("[id], svg") as SVGElement | null;
-        if (!parent || parent.tagName.toLowerCase() === "svg") {
-            return null;
-        }
-
-        if (parent.matches("#_x5F_ignored, #_ignored")) {
-            return null;
-        }
-
-        if (parent.matches(".excluded, #_x5F_excluded, #_excluded")) {
-            return null;
-        }
-
-        return this.readTitleNode(parent) ?? parent.getAttribute("title") ?? (parent.id || null);
-    }
-
-    private escapeSelector(value: string): string {
-        const css = (window as Window & typeof globalThis & { CSS?: { escape?(input: string): string } }).CSS;
-        if (css?.escape) {
-            return css.escape(value);
-        }
-
-        return value.replace(/([ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~])/g, "\\$1");
-    }
-
-    private readTitleNode(element: SVGElement): string | null {
-        const titleNode = element.querySelector(":scope > title");
-        return titleNode?.textContent?.trim() ?? null;
-    }
-
-    private readElementDisplayName(element: SVGElement): string | null {
-        return element.getAttribute("data-synoptic-display-name")
-            ?? this.readTitleNode(element)
-            ?? element.getAttribute("title")
-            ?? (element.id || null);
-    }
-
-    private getElementBounds(element: SVGElement): DOMRect {
-        const graphicsElement = element as unknown as SVGGraphicsElement;
-        const box = graphicsElement.getBBox();
-        return new DOMRect(box.x, box.y, box.width, box.height);
     }
 
     private parseSvgIcon(svgMarkup: string): SVGSVGElement {
@@ -985,40 +710,6 @@ export class Visual implements IVisual {
         }
 
         console.info(prefix, details);
-    }
-
-    private attachTooltipEvents(element: SVGElement, tooltipItems: VisualTooltipDataItem[], selectionId: ISelectionId): void {
-        if (!this.tooltipService.enabled()) return;
-
-        const getCoords = (event: MouseEvent): number[] => {
-            const rect = this.root.getBoundingClientRect();
-            return [event.clientX - rect.left, event.clientY - rect.top];
-        };
-
-        element.addEventListener("mouseover", (event: MouseEvent) => {
-            this.tooltipService.show({
-                coordinates: getCoords(event),
-                isTouchEvent: false,
-                dataItems: tooltipItems,
-                identities: [selectionId]
-            });
-        });
-
-        element.addEventListener("mousemove", (event: MouseEvent) => {
-            this.tooltipService.move({
-                coordinates: getCoords(event),
-                isTouchEvent: false,
-                dataItems: tooltipItems,
-                identities: [selectionId]
-            });
-        });
-
-        element.addEventListener("mouseout", () => {
-            this.tooltipService.hide({
-                isTouchEvent: false,
-                immediately: false
-            });
-        });
     }
 
 }
