@@ -1,6 +1,6 @@
-# SVG Panel for Power BI
+# SVG Extended Panel for Power BI
 
-SVG Panel allows you to present one or more SVG diagrams (called maps, not necessarily geographical maps), assign meaning to arbitrary parts of them (called areas), and dynamically highlight or color those areas with Power BI data.
+SVG Extended Panel allows you to present one or more SVG diagrams (called maps, not necessarily geographical maps), assign meaning to arbitrary parts of them (called areas), and dynamically highlight or color those areas with Power BI data.
 
 ![alt tag](screenshot.png)
 
