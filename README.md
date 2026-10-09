@@ -12,6 +12,7 @@ This repository now contains a modern Power BI custom visual scaffold based on `
 - The original legacy implementation was preserved in [legacy/src-legacy/visual.ts](legacy/src-legacy/visual.ts) as a migration reference.
 - The current modernized renderer focuses on the core path: load an SVG map, match category values to SVG IDs or titles, apply data colors, and package successfully for current Power BI tooling.
 - Legacy features such as gallery workflows, advanced labels, state calculations, saturation logic, and the full old format pane still need to be ported.
+[Original Repo](https://github.com/TKlerx/svg-panel)
 
 
 ### Attribution and license
