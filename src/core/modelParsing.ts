@@ -61,11 +61,17 @@ export interface SynopticVisualSettings {
         categoryBold: boolean;
         categoryItalic: boolean;
         categoryUnderline: boolean;
+        categoryBackgroundShow: boolean;
+        categoryBackgroundColor: string;
+        categoryBackgroundTransparency: number;
         valueFont: string;
         valueColor: string;
         valueBold: boolean;
         valueItalic: boolean;
         valueUnderline: boolean;
+        valueBackgroundShow: boolean;
+        valueBackgroundColor: string;
+        valueBackgroundTransparency: number;
         valuePrecision: number;
         valueUnits: string;
         enclose: boolean;
@@ -225,11 +231,17 @@ export function readSettings(dataView: DataView | undefined): SynopticVisualSett
             categoryBold: getValue<boolean>(objects, "dataLabels", "categoryBold", false),
             categoryItalic: getValue<boolean>(objects, "dataLabels", "categoryItalic", false),
             categoryUnderline: getValue<boolean>(objects, "dataLabels", "categoryUnderline", false),
+            categoryBackgroundShow: getValue<boolean>(objects, "dataLabels", "categoryBackgroundShow", false),
+            categoryBackgroundColor: getFillColor(objects, "dataLabels", "categoryBackgroundColor", "#808080") ?? "#808080",
+            categoryBackgroundTransparency: getValue<number>(objects, "dataLabels", "categoryBackgroundTransparency", 70) ?? 70,
             valueFont: getValue<string>(objects, "dataLabels", "valueFont", "Arial") ?? "Arial",
             valueColor: getFillColor(objects, "dataLabels", "valueColor", "#000000") ?? "#000000",
             valueBold: getValue<boolean>(objects, "dataLabels", "valueBold", false),
             valueItalic: getValue<boolean>(objects, "dataLabels", "valueItalic", false),
             valueUnderline: getValue<boolean>(objects, "dataLabels", "valueUnderline", false),
+            valueBackgroundShow: getValue<boolean>(objects, "dataLabels", "valueBackgroundShow", false),
+            valueBackgroundColor: getFillColor(objects, "dataLabels", "valueBackgroundColor", "#808080") ?? "#808080",
+            valueBackgroundTransparency: getValue<number>(objects, "dataLabels", "valueBackgroundTransparency", 70) ?? 70,
             valuePrecision: Number(getValue<string | number>(objects, "dataLabels", "valuePrecision", -1) ?? -1),
             valueUnits: getValue<string>(objects, "dataLabels", "valueUnits", "auto") ?? "auto",
             enclose: getValue<boolean>(objects, "dataLabels", "enclose", true),

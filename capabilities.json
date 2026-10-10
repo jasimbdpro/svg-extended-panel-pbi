@@ -580,6 +580,9 @@
         "categoryBold": { "displayName": "Category bold", "type": { "bool": true } },
         "categoryItalic": { "displayName": "Category italic", "type": { "bool": true } },
         "categoryUnderline": { "displayName": "Category underline", "type": { "bool": true } },
+        "categoryBackgroundShow": { "displayName": "Category background", "type": { "bool": true } },
+        "categoryBackgroundColor": { "displayName": "Category background color", "type": { "fill": { "solid": { "color": true } } } },
+        "categoryBackgroundTransparency": { "displayName": "Category background transparency (%)", "type": { "numeric": true } },
         "valueFont": {
           "displayName": "Value font",
           "type": { "formatting": { "fontFamily": true } }
@@ -591,6 +594,9 @@
         "valueBold": { "displayName": "Value bold", "type": { "bool": true } },
         "valueItalic": { "displayName": "Value italic", "type": { "bool": true } },
         "valueUnderline": { "displayName": "Value underline", "type": { "bool": true } },
+        "valueBackgroundShow": { "displayName": "Value background", "type": { "bool": true } },
+        "valueBackgroundColor": { "displayName": "Value background color", "type": { "fill": { "solid": { "color": true } } } },
+        "valueBackgroundTransparency": { "displayName": "Value background transparency (%)", "type": { "numeric": true } },
         "valuePrecision": {
           "displayName": "Decimal places",
           "type": { "enumeration": [

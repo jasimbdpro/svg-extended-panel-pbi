@@ -38,6 +38,7 @@ export function renderLabels(svgElement: SVGSVGElement, labels: LabelSpec[], set
     const labelLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
     labelLayer.setAttribute("class", "synoptic-label-layer");
     labelLayer.setAttribute("pointer-events", "none");
+    const rendered: Array<{ text: SVGTextElement; runs: LabelRun[] }> = [];
     for (const label of labels) {
         const box = (label.element as SVGGraphicsElement).getBBox();
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -69,8 +70,31 @@ export function renderLabels(svgElement: SVGSVGElement, labels: LabelSpec[], set
         text.setAttribute("text-anchor", top && !centeredMultiline ? "start" : "middle");
         if (!top && !multiline) text.setAttribute("dominant-baseline", "middle");
         labelLayer.appendChild(text);
+        rendered.push({ text, runs });
     }
     svgElement.appendChild(labelLayer);
+    for (const { text, runs } of rendered) {
+        const backgrounds = runs.map((run, index) => {
+            const config = run.kind === "value"
+                ? { show: settings.dataLabels.valueBackgroundShow, color: settings.dataLabels.valueBackgroundColor, transparency: settings.dataLabels.valueBackgroundTransparency }
+                : { show: settings.dataLabels.categoryBackgroundShow, color: settings.dataLabels.categoryBackgroundColor, transparency: settings.dataLabels.categoryBackgroundTransparency };
+            if (!config.show) return null;
+            const measured = text.childElementCount > 0 ? text.children[index] as SVGGraphicsElement : text;
+            const bounds = measured.getBBox();
+            const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            const transparency = Math.min(100, Math.max(0, config.transparency));
+            rect.setAttribute("x", `${bounds.x - 3}`);
+            rect.setAttribute("y", `${bounds.y - 2}`);
+            rect.setAttribute("width", `${bounds.width + 6}`);
+            rect.setAttribute("height", `${bounds.height + 4}`);
+            rect.setAttribute("rx", "2");
+            rect.setAttribute("fill", config.color);
+            rect.setAttribute("fill-opacity", `${(100 - transparency) / 100}`);
+            rect.setAttribute("data-synoptic-label-background", run.kind);
+            return rect;
+        }).filter((rect): rect is SVGRectElement => rect !== null);
+        for (const background of backgrounds) labelLayer.insertBefore(background, text);
+    }
 }
 
 function applyRunStyle(element: SVGElement, kind: "category" | "value", settings: SynopticVisualSettings): void {

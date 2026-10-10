@@ -361,11 +361,33 @@ class DataLabelsCardSettings extends FormattingSettingsCard {
     categoryBold = new formattingSettings.ToggleSwitch({ name: "categoryBold", displayName: "Category bold", value: false });
     categoryItalic = new formattingSettings.ToggleSwitch({ name: "categoryItalic", displayName: "Category italic", value: false });
     categoryUnderline = new formattingSettings.ToggleSwitch({ name: "categoryUnderline", displayName: "Category underline", value: false });
+    categoryBackgroundShow = new formattingSettings.ToggleSwitch({ name: "categoryBackgroundShow", displayName: "Category background", value: false });
+    categoryBackgroundColor = new formattingSettings.ColorPicker({ name: "categoryBackgroundColor", displayName: "Category background color", value: { value: "#808080" } });
+    categoryBackgroundTransparency = new formattingSettings.NumUpDown({
+        name: "categoryBackgroundTransparency",
+        displayName: "Category background transparency (%)",
+        value: 70,
+        options: {
+            minValue: { type: powerbi.visuals.ValidatorType.Min, value: 0 },
+            maxValue: { type: powerbi.visuals.ValidatorType.Max, value: 100 }
+        }
+    });
     valueFont = new formattingSettings.FontPicker({ name: "valueFont", displayName: "Value font", value: "Arial" });
     valueColor = new formattingSettings.ColorPicker({ name: "valueColor", displayName: "Value color", value: { value: "#000000" } });
     valueBold = new formattingSettings.ToggleSwitch({ name: "valueBold", displayName: "Value bold", value: false });
     valueItalic = new formattingSettings.ToggleSwitch({ name: "valueItalic", displayName: "Value italic", value: false });
     valueUnderline = new formattingSettings.ToggleSwitch({ name: "valueUnderline", displayName: "Value underline", value: false });
+    valueBackgroundShow = new formattingSettings.ToggleSwitch({ name: "valueBackgroundShow", displayName: "Value background", value: false });
+    valueBackgroundColor = new formattingSettings.ColorPicker({ name: "valueBackgroundColor", displayName: "Value background color", value: { value: "#808080" } });
+    valueBackgroundTransparency = new formattingSettings.NumUpDown({
+        name: "valueBackgroundTransparency",
+        displayName: "Value background transparency (%)",
+        value: 70,
+        options: {
+            minValue: { type: powerbi.visuals.ValidatorType.Min, value: 0 },
+            maxValue: { type: powerbi.visuals.ValidatorType.Max, value: 100 }
+        }
+    });
     valuePrecision = new formattingSettings.ItemDropdown({ name: "valuePrecision", displayName: "Decimal places", value: precisionItems[0], items: precisionItems });
     valueUnits = new formattingSettings.ItemDropdown({ name: "valueUnits", displayName: "Display units", value: labelUnitItems[0], items: labelUnitItems });
 
@@ -385,7 +407,10 @@ class DataLabelsCardSettings extends FormattingSettingsCard {
         this.categoryBold,
         this.categoryItalic,
         this.categoryUnderline,
-        this.valueFont, this.valueColor, this.valueBold, this.valueItalic, this.valueUnderline, this.valuePrecision, this.valueUnits
+        this.categoryBackgroundShow, this.categoryBackgroundColor, this.categoryBackgroundTransparency,
+        this.valueFont, this.valueColor, this.valueBold, this.valueItalic, this.valueUnderline,
+        this.valueBackgroundShow, this.valueBackgroundColor, this.valueBackgroundTransparency,
+        this.valuePrecision, this.valueUnits
     ];
 
     onPreProcess(): void {
@@ -401,11 +426,17 @@ class DataLabelsCardSettings extends FormattingSettingsCard {
         this.categoryBold.visible = enabled;
         this.categoryItalic.visible = enabled;
         this.categoryUnderline.visible = enabled;
+        this.categoryBackgroundShow.visible = enabled;
+        this.categoryBackgroundColor.visible = enabled && this.categoryBackgroundShow.value;
+        this.categoryBackgroundTransparency.visible = enabled && this.categoryBackgroundShow.value;
         this.valueFont.visible = enabled;
         this.valueColor.visible = enabled;
         this.valueBold.visible = enabled;
         this.valueItalic.visible = enabled;
         this.valueUnderline.visible = enabled;
+        this.valueBackgroundShow.visible = enabled;
+        this.valueBackgroundColor.visible = enabled && this.valueBackgroundShow.value;
+        this.valueBackgroundTransparency.visible = enabled && this.valueBackgroundShow.value;
         this.valuePrecision.visible = enabled;
         this.valueUnits.visible = enabled;
     }
