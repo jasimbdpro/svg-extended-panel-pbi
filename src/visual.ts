@@ -18,7 +18,7 @@ import VisualUpdateOptions = powerbi.extensibility.visual.VisualUpdateOptions;
 import { createSynopticModel, type SynopticDataPoint, type SynopticMapDefinition, type SynopticMapScale, type SynopticModel, type SynopticVisualSettings } from "./core/modelParsing";
 import { getIndexedElements, getMatchingElements, getUnmatchedElements, indexSvg, inferAreas, type SvgMatchMap } from "./core/svgIndex";
 import { DEFAULT_ZOOM, buildTransformStyle, createZeroPan, nextZoom, shouldResetPanForZoom } from "./core/zoomPan";
-import { buildLabelText, buildUnmatchedLabelText, renderLabels, type LabelSpec } from "./core/labels";
+import { buildLabelRuns, buildLabelText, buildUnmatchedLabelText, renderLabels, type LabelSpec } from "./core/labels";
 import { applySelectionState } from "./core/selection";
 import { attachTooltipEvents } from "./core/tooltips";
 import { VisualFormattingSettingsModel } from "./settings";
@@ -429,7 +429,8 @@ export class Visual implements IVisual {
                 if (labelText) {
                     labels.push({
                         element,
-                        text: labelText
+                        text: labelText,
+                        runs: buildLabelRuns(point, element, model.settings)
                     });
                 }
             }

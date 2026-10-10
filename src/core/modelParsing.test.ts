@@ -1,6 +1,6 @@
 import powerbi from "powerbi-visuals-api";
 import { describe, expect, it } from "vitest";
-import { createSynopticModel, formatNumber, formatTooltipValue, readSettings, resolveMapDefinition, sortBoundStates } from "./modelParsing";
+import { createSynopticModel, formatLabelValue, formatNumber, formatTooltipValue, readSettings, resolveMapDefinition, sortBoundStates } from "./modelParsing";
 
 import DataView = powerbi.DataView;
 import DataViewCategoryColumn = powerbi.DataViewCategoryColumn;
@@ -187,6 +187,14 @@ describe("format helpers", () => {
         expect(formatTooltipValue(0.4486, "0.0%")).toBe("44.9%");
         expect(formatTooltipValue(12.345, "0.00")).toBe("12.35");
         expect(formatTooltipValue("Shelf A")).toBe("Shelf A");
+    });
+
+    it("formats label display units and configured precision", () => {
+        expect(formatLabelValue(1234, "auto", -1)).toBe("1.23K");
+        expect(formatLabelValue(1234567, "auto", 1)).toBe("1.2M");
+        expect(formatLabelValue(2300000000, "auto", 0)).toBe("2B");
+        expect(formatLabelValue(1234, "thousands", 1)).toBe("1.2K");
+        expect(formatLabelValue(1234, "none", 0)).toBe("1234");
     });
 });
 

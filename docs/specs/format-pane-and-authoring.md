@@ -48,6 +48,8 @@ The visual exposes authoring controls through the modern Power BI format pane an
 ## Data Labels Card
 
 - `Implemented`: Label visibility, unmatched-label visibility, label style, position, and font size are exposed.
+- `Implemented`: Category and value labels have independent font, color, bold, italic, and underline settings.
+- `Implemented`: Value labels support automatic or fixed decimal precision and automatic, none, K, M, or B display units.
 - `Partial`: Label placement and wrapping are simplified.
 - `Legacy parity target`: Restore unit/precision formatting and best-fit placement parity.
 

@@ -40,6 +40,19 @@ const labelPositionItems: EnumMember[] = [
     { value: "best", displayName: "Best" }
 ];
 
+const labelUnitItems: EnumMember[] = [
+    { value: "auto", displayName: "Auto (K, M, B)" },
+    { value: "none", displayName: "None" },
+    { value: "thousands", displayName: "Thousands (K)" },
+    { value: "millions", displayName: "Millions (M)" },
+    { value: "billions", displayName: "Billions (B)" }
+];
+
+const precisionItems: EnumMember[] = [
+    { value: "-1", displayName: "Auto" },
+    ...Array.from({ length: 11 }, (_, precision) => ({ value: `${precision}`, displayName: `${precision}` }))
+];
+
 const toolbarScaleItems: EnumMember[] = [
     { value: "0.5", displayName: "50%" },
     { value: "0.75", displayName: "75%" },
@@ -343,6 +356,19 @@ class DataLabelsCardSettings extends FormattingSettingsCard {
         value: 9
     });
 
+    categoryFont = new formattingSettings.FontPicker({ name: "categoryFont", displayName: "Category font", value: "Arial" });
+    categoryColor = new formattingSettings.ColorPicker({ name: "categoryColor", displayName: "Category color", value: { value: "#000000" } });
+    categoryBold = new formattingSettings.ToggleSwitch({ name: "categoryBold", displayName: "Category bold", value: false });
+    categoryItalic = new formattingSettings.ToggleSwitch({ name: "categoryItalic", displayName: "Category italic", value: false });
+    categoryUnderline = new formattingSettings.ToggleSwitch({ name: "categoryUnderline", displayName: "Category underline", value: false });
+    valueFont = new formattingSettings.FontPicker({ name: "valueFont", displayName: "Value font", value: "Arial" });
+    valueColor = new formattingSettings.ColorPicker({ name: "valueColor", displayName: "Value color", value: { value: "#000000" } });
+    valueBold = new formattingSettings.ToggleSwitch({ name: "valueBold", displayName: "Value bold", value: false });
+    valueItalic = new formattingSettings.ToggleSwitch({ name: "valueItalic", displayName: "Value italic", value: false });
+    valueUnderline = new formattingSettings.ToggleSwitch({ name: "valueUnderline", displayName: "Value underline", value: false });
+    valuePrecision = new formattingSettings.ItemDropdown({ name: "valuePrecision", displayName: "Decimal places", value: precisionItems[0], items: precisionItems });
+    valueUnits = new formattingSettings.ItemDropdown({ name: "valueUnits", displayName: "Display units", value: labelUnitItems[0], items: labelUnitItems });
+
     name = "dataLabels";
     displayName = "Data labels";
     analyticsPane = false;
@@ -353,7 +379,13 @@ class DataLabelsCardSettings extends FormattingSettingsCard {
         this.position,
         this.enclose,
         this.wordWrap,
-        this.fontSize
+        this.fontSize,
+        this.categoryFont,
+        this.categoryColor,
+        this.categoryBold,
+        this.categoryItalic,
+        this.categoryUnderline,
+        this.valueFont, this.valueColor, this.valueBold, this.valueItalic, this.valueUnderline, this.valuePrecision, this.valueUnits
     ];
 
     onPreProcess(): void {
@@ -364,6 +396,18 @@ class DataLabelsCardSettings extends FormattingSettingsCard {
         this.enclose.visible = enabled;
         this.wordWrap.visible = enabled;
         this.fontSize.visible = enabled;
+        this.categoryFont.visible = enabled;
+        this.categoryColor.visible = enabled;
+        this.categoryBold.visible = enabled;
+        this.categoryItalic.visible = enabled;
+        this.categoryUnderline.visible = enabled;
+        this.valueFont.visible = enabled;
+        this.valueColor.visible = enabled;
+        this.valueBold.visible = enabled;
+        this.valueItalic.visible = enabled;
+        this.valueUnderline.visible = enabled;
+        this.valuePrecision.visible = enabled;
+        this.valueUnits.visible = enabled;
     }
 }
 

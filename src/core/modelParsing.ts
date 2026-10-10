@@ -56,6 +56,18 @@ export interface SynopticVisualSettings {
         labelStyle: string;
         position: string;
         fontSize: number;
+        categoryFont: string;
+        categoryColor: string;
+        categoryBold: boolean;
+        categoryItalic: boolean;
+        categoryUnderline: boolean;
+        valueFont: string;
+        valueColor: string;
+        valueBold: boolean;
+        valueItalic: boolean;
+        valueUnderline: boolean;
+        valuePrecision: number;
+        valueUnits: string;
         enclose: boolean;
         wordWrap: boolean;
     };
@@ -208,6 +220,18 @@ export function readSettings(dataView: DataView | undefined): SynopticVisualSett
             labelStyle: getValue<string>(objects, "dataLabels", "labelStyle", "category") ?? "category",
             position: getValue<string>(objects, "dataLabels", "position", "best") ?? "best",
             fontSize: getValue<number>(objects, "dataLabels", "fontSize", 9) ?? 9,
+            categoryFont: getValue<string>(objects, "dataLabels", "categoryFont", "Arial") ?? "Arial",
+            categoryColor: getFillColor(objects, "dataLabels", "categoryColor", "#000000") ?? "#000000",
+            categoryBold: getValue<boolean>(objects, "dataLabels", "categoryBold", false),
+            categoryItalic: getValue<boolean>(objects, "dataLabels", "categoryItalic", false),
+            categoryUnderline: getValue<boolean>(objects, "dataLabels", "categoryUnderline", false),
+            valueFont: getValue<string>(objects, "dataLabels", "valueFont", "Arial") ?? "Arial",
+            valueColor: getFillColor(objects, "dataLabels", "valueColor", "#000000") ?? "#000000",
+            valueBold: getValue<boolean>(objects, "dataLabels", "valueBold", false),
+            valueItalic: getValue<boolean>(objects, "dataLabels", "valueItalic", false),
+            valueUnderline: getValue<boolean>(objects, "dataLabels", "valueUnderline", false),
+            valuePrecision: Number(getValue<string | number>(objects, "dataLabels", "valuePrecision", -1) ?? -1),
+            valueUnits: getValue<string>(objects, "dataLabels", "valueUnits", "auto") ?? "auto",
             enclose: getValue<boolean>(objects, "dataLabels", "enclose", true),
             wordWrap: getValue<boolean>(objects, "dataLabels", "wordWrap", true)
         },
@@ -302,6 +326,23 @@ export function formatTooltipValue(value: PrimitiveValue, format?: string): stri
 
 export function formatNumber(value: number): string {
     return Number.isInteger(value) ? `${value}` : value.toFixed(2).replace(/\.?0+$/, "");
+}
+
+export function formatLabelValue(value: number, units: string, precision: number): string {
+    let divisor = 1;
+    let suffix = "";
+    if (units === "thousands") { divisor = 1_000; suffix = "K"; }
+    if (units === "millions") { divisor = 1_000_000; suffix = "M"; }
+    if (units === "billions") { divisor = 1_000_000_000; suffix = "B"; }
+    if (units === "auto") {
+        if (Math.abs(value) >= 1_000_000_000) { divisor = 1_000_000_000; suffix = "B"; }
+        else if (Math.abs(value) >= 1_000_000) { divisor = 1_000_000; suffix = "M"; }
+        else if (Math.abs(value) >= 1_000) { divisor = 1_000; suffix = "K"; }
+    }
+    const scaled = value / divisor;
+    const decimals = precision < 0 ? (Number.isInteger(scaled) ? 0 : 2) : Math.min(10, Math.max(0, precision));
+    const formatted = scaled.toFixed(decimals);
+    return `${decimals === 0 ? formatted : formatted.replace(/0+$/, "").replace(/\.$/, "")}${suffix}`;
 }
 
 function buildTooltips(

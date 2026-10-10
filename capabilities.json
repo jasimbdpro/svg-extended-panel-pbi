@@ -568,6 +568,55 @@
           "type": {
             "numeric": true
           }
+        },
+        "categoryFont": {
+          "displayName": "Category font",
+          "type": { "formatting": { "fontFamily": true } }
+        },
+        "categoryColor": {
+          "displayName": "Category color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "categoryBold": { "displayName": "Category bold", "type": { "bool": true } },
+        "categoryItalic": { "displayName": "Category italic", "type": { "bool": true } },
+        "categoryUnderline": { "displayName": "Category underline", "type": { "bool": true } },
+        "valueFont": {
+          "displayName": "Value font",
+          "type": { "formatting": { "fontFamily": true } }
+        },
+        "valueColor": {
+          "displayName": "Value color",
+          "type": { "fill": { "solid": { "color": true } } }
+        },
+        "valueBold": { "displayName": "Value bold", "type": { "bool": true } },
+        "valueItalic": { "displayName": "Value italic", "type": { "bool": true } },
+        "valueUnderline": { "displayName": "Value underline", "type": { "bool": true } },
+        "valuePrecision": {
+          "displayName": "Decimal places",
+          "type": { "enumeration": [
+            { "displayName": "Auto", "value": "-1" },
+            { "displayName": "0", "value": "0" },
+            { "displayName": "1", "value": "1" },
+            { "displayName": "2", "value": "2" },
+            { "displayName": "3", "value": "3" },
+            { "displayName": "4", "value": "4" },
+            { "displayName": "5", "value": "5" },
+            { "displayName": "6", "value": "6" },
+            { "displayName": "7", "value": "7" },
+            { "displayName": "8", "value": "8" },
+            { "displayName": "9", "value": "9" },
+            { "displayName": "10", "value": "10" }
+          ] }
+        },
+        "valueUnits": {
+          "displayName": "Display units",
+          "type": { "enumeration": [
+            { "displayName": "Auto (K, M, B)", "value": "auto" },
+            { "displayName": "None", "value": "none" },
+            { "displayName": "Thousands (K)", "value": "thousands" },
+            { "displayName": "Millions (M)", "value": "millions" },
+            { "displayName": "Billions (B)", "value": "billions" }
+          ] }
         }
       }
     },
