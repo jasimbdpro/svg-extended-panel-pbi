@@ -7,8 +7,8 @@ export function buildLabelText(point: SynopticDataPoint, element: SVGElement, se
     switch (settings.dataLabels.labelStyle) {
         case "area": return areaName ?? point.key;
         case "value": return point.value == null ? "" : formatNumber(point.value);
-        case "both": return point.value == null ? point.key : `${point.key} ${formatNumber(point.value)}`;
-        case "both2": return point.value == null ? (areaName ?? point.key) : `${areaName ?? point.key} ${formatNumber(point.value)}`;
+        case "both": return point.value == null ? point.key : `${point.key}\n${formatNumber(point.value)}`;
+        case "both2": return point.value == null ? (areaName ?? point.key) : `${areaName ?? point.key}\n${formatNumber(point.value)}`;
         case "category":
         default: return point.key;
     }
@@ -28,12 +28,26 @@ export function renderLabels(svgElement: SVGSVGElement, labels: LabelSpec[], set
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         const top = settings.dataLabels.position === "top";
         text.setAttribute("x", `${top ? box.x + 4 : box.x + box.width / 2}`);
-        text.setAttribute("y", `${top ? box.y + 14 : box.y + box.height / 2}`);
+        const lines = label.text.split("\n");
+        const fontSize = settings.dataLabels.fontSize;
+        const multiline = lines.length > 1;
+        const y = top || !multiline ? (top ? box.y + 14 : box.y + box.height / 2) : box.y + box.height / 2 - fontSize * 0.55;
+        text.setAttribute("y", `${y}`);
         text.setAttribute("font-size", `${settings.dataLabels.fontSize}`);
         text.setAttribute("class", "synoptic-label");
-        text.textContent = label.text;
-        text.setAttribute("text-anchor", top ? "start" : "middle");
-        if (!top) text.setAttribute("dominant-baseline", "middle");
+        if (multiline) {
+            lines.forEach((line, index) => {
+                const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+                tspan.setAttribute("x", `${top ? box.x + 4 : box.x + box.width / 2}`);
+                tspan.setAttribute("dy", index === 0 ? "0" : "1.1em");
+                tspan.textContent = line;
+                text.appendChild(tspan);
+            });
+        } else {
+            text.textContent = label.text;
+        }
+        text.setAttribute("text-anchor", top || multiline ? "start" : "middle");
+        if (!top && !multiline) text.setAttribute("dominant-baseline", "middle");
         labelLayer.appendChild(text);
     }
     svgElement.appendChild(labelLayer);
