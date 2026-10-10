@@ -42,11 +42,13 @@ export function renderLabels(svgElement: SVGSVGElement, labels: LabelSpec[], set
         const box = (label.element as SVGGraphicsElement).getBBox();
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         const top = settings.dataLabels.position === "top";
-        text.setAttribute("x", `${top ? box.x + 4 : box.x + box.width / 2}`);
         const runs = label.runs ?? label.text.split("\n").map((line, index) => ({ text: line, kind: index > 0 ? "value" as const : "category" as const }));
         const lines = runs.map((run) => run.text);
         const fontSize = settings.dataLabels.fontSize;
         const multiline = lines.length > 1;
+        const centeredMultiline = multiline;
+        const labelX = centeredMultiline || !top ? box.x + box.width / 2 : box.x + 4;
+        text.setAttribute("x", `${labelX}`);
         const y = top || !multiline ? (top ? box.y + 14 : box.y + box.height / 2) : box.y + box.height / 2 - fontSize * 0.55;
         text.setAttribute("y", `${y}`);
         text.setAttribute("font-size", `${settings.dataLabels.fontSize}`);
@@ -54,7 +56,7 @@ export function renderLabels(svgElement: SVGSVGElement, labels: LabelSpec[], set
         if (multiline) {
             lines.forEach((line, index) => {
                 const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-                tspan.setAttribute("x", `${top ? box.x + 4 : box.x + box.width / 2}`);
+                tspan.setAttribute("x", `${labelX}`);
                 tspan.setAttribute("dy", index === 0 ? "0" : "1.1em");
                 applyRunStyle(tspan, runs[index].kind, settings);
                 tspan.textContent = line;
@@ -64,7 +66,7 @@ export function renderLabels(svgElement: SVGSVGElement, labels: LabelSpec[], set
             applyRunStyle(text, runs[0]?.kind ?? "category", settings);
             text.textContent = label.text;
         }
-        text.setAttribute("text-anchor", top || multiline ? "start" : "middle");
+        text.setAttribute("text-anchor", top && !centeredMultiline ? "start" : "middle");
         if (!top && !multiline) text.setAttribute("dominant-baseline", "middle");
         labelLayer.appendChild(text);
     }
